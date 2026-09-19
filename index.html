@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ujian Online PMR - Anti-Curang System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Firebase App & Database -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        .no-select {
+            user-select: none;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between">
+
+    <!-- HEADER / NAVBAR -->
+    <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-red-600 text-white p-2 rounded-lg font-bold">
+                    <i class="fa-solid font-bold text-lg">✚</i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight text-white">CBT PMR Online</h1>
+                    <p class="text-xs text-slate-400">Proctored Anti-Cheat System</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="statusBadge" class="hidden md:flex items-center gap-2 bg-slate-700/50 px-3 py-1.5 rounded-full border border-slate-600 text-xs">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="statusText" class="text-slate-300">Sistem Siap</span>
+                </div>
+                <button id="btnProctorLogin" onclick="showProctorLoginModal()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg font-medium transition flex items-center gap-2 border border-slate-600">
+                    <i class="fa-solid fa-user-shield"></i> Dasbor Pengawas
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl mx-auto w-full p-4 md:p-6 flex-1">
+        
+        <!-- REGISTRATION / LOGIN SECTION -->
+        <section id="loginSection" class="max-w-md mx-auto my-8 bg-slate-800 border border-slate-700 p-6 md:p-8 rounded-2xl shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-red-600/10 border border-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                    <i class="fa-solid fa-user-graduate"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white">Registrasi Peserta</h2>
+                <p class="text-slate-400 text-sm mt-1">Masukkan data diri untuk memulai Ujian PMR</p>
+            </div>
+
+            <form id="formRegistration" onsubmit="handleStartExam(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Nama Lengkap</label>
+                    <input type="text" id="inputStudentName" required placeholder="Contoh: Budi Santoso" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-red-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Unit PMR / Sekolah</label>
+                    <input type="text" id="inputStudentUnit" required placeholder="Contoh: PMR Madya SMPN 1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-red-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Token Ujian</label>
+                    <input type="text" id="inputExamToken" required uppercase placeholder="Masukkan Token" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-100 tracking-widest font-mono uppercase placeholder-slate-500 focus:outline-none focus:border-red-500 transition">
+                    <p class="text-[11px] text-slate-500 mt-1">Mintalah token ujian kepada pengawas ruangan.</p>
+                </div>
+
+                <div class="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-300 flex gap-2.5 items-start mt-4">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 text-sm"></i>
+                    <div>
+                        <strong class="block mb-0.5 font-semibold text-amber-200">Peraturan Ujian Anti-Curang:</strong>
+                        <ul class="list-disc list-inside space-y-0.5 opacity-90 text-[11px]">
+                            <li>Ujian wajib dilaksanakan dalam mode Layar Penuh (Fullscreen).</li>
+                            <li>Dilarang berpindah tab/jendela browser (Maksimal 3x Peringatan).</li>
+                            <li>Kamera web pengawas akan diaktifkan secara lokal.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-red-600 hover:bg-red-500 text-white font-semibold py-3 px-4 rounded-lg transition shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 mt-6">
+                    <i class="fa-solid fa-play"></i> Mulai Ujian Sekarang
+                </button>
+            </form>
+        </section>
+
+        <!-- EXAM WORKSPACE SECTION (HIDDEN INITIALLY) -->
+        <section id="examSection" class="hidden grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            <!-- LEFT / TOP MAIN EXAM AREA -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- EXAM HEADER INFO -->
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex flex-wrap justify-between items-center gap-4">
+                    <div>
+                        <span class="text-xs uppercase font-semibold text-red-400 tracking-wider">Siswa Terdaftar</span>
+                        <h3 id="displayStudentInfo" class="font-bold text-lg text-white">Nama Siswa (Unit)</h3>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <span class="text-xs uppercase font-semibold text-slate-400 tracking-wider">Sisa Waktu</span>
+                            <div id="timerDisplay" class="font-mono text-2xl font-bold text-amber-400">30:00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QUESTION CONTAINER -->
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-xl relative min-h-[380px] flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-3 mb-4">
+                            <span id="questionTypeBadge" class="bg-red-500/20 text-red-300 border border-red-500/30 text-xs px-2.5 py-1 rounded-md font-medium">
+                                Pilihan Ganda
+                            </span>
+                            <span class="text-xs text-slate-400 font-mono">Soal No. <strong id="currentNum" class="text-white text-sm">1</strong> dari 30</span>
+                        </div>
+
+                        <!-- QUESTION STATEMENT -->
+                        <div id="questionText" class="text-slate-100 text-base md:text-lg font-medium leading-relaxed mb-6 no-select">
+                            Memuat pertanyaan...
+                        </div>
+
+                        <!-- OPTIONS CONTAINER -->
+                        <div id="optionsContainer" class="space-y-3">
+                            <!-- Dynamic Options Rendered Here -->
+                        </div>
+                    </div>
+
+                    <!-- EXAM NAVIGATION BUTTONS -->
+                    <div class="flex justify-between items-center pt-6 mt-6 border-t border-slate-700">
+                        <button id="btnPrev" onclick="navigateQuestion(-1)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg font-medium text-sm transition flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-arrow-left"></i> Sebelumnya
+                        </button>
+                        <button id="btnNext" onclick="navigateQuestion(1)" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg font-medium text-sm transition flex items-center gap-2">
+                            Berikutnya <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                        <button id="btnFinishExam" onclick="confirmFinishExam()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg font-semibold text-sm transition shadow-lg shadow-emerald-600/30 flex items-center gap-2">
+                            <i class="fa-solid fa-check-double"></i> Selesaikan Ujian
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PROCTORING & NAV PANEL -->
+            <div class="space-y-6">
+                <!-- LIVE WEBCAM FEED & CHEAT MONITOR -->
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+                        <span><i class="fa-solid fa-video text-red-500 mr-1.5"></i> Pengawas Kamera</span>
+                        <span id="cheatWarningBadge" class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded border border-emerald-500/30">Aman</span>
+                    </h4>
+                    <div class="relative bg-slate-900 rounded-lg overflow-hidden border border-slate-700 aspect-video flex items-center justify-center">
+                        <video id="webcamVideo" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
+                        <div id="webcamFallback" class="hidden absolute text-center p-3 text-slate-500 text-xs">
+                            <i class="fa-solid fa-camera-retro text-2xl mb-1 text-slate-600"></i><br>Kamera Tidak Aktif
+                        </div>
+                    </div>
+                    <div class="mt-3 bg-slate-900/80 p-2.5 rounded-lg border border-slate-700 text-xs space-y-1">
+                        <div class="flex justify-between text-slate-400">
+                            <span>Pelanggaran / Blur:</span>
+                            <span id="cheatCountText" class="font-bold text-slate-200">0 / 3</span>
+                        </div>
+                        <div class="w-full bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                            <div id="cheatProgressBar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NAVIGATION GRID -->
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+                        <span>Navigasi Soal</span>
+                        <span id="answeredCounter" class="text-xs font-normal text-slate-400">0/30 Dijawab</span>
+                    </h4>
+                    <div id="questionGrid" class="grid grid-cols-5 gap-2 max-h-56 overflow-y-auto pr-1">
+                        <!-- Dynamic Buttons -->
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- PROCTOR DASHBOARD (HIDDEN INITIALLY) -->
+        <section id="proctorDashboard" class="hidden space-y-6">
+            <div class="bg-slate-800 border border-slate-700 p-6 rounded-xl flex flex-wrap justify-between items-center gap-4 shadow-xl">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-red-500/20 text-red-400 border border-red-500/30 text-xs px-2.5 py-0.5 rounded font-semibold uppercase">Mode Pengawas</span>
+                        <h2 class="text-2xl font-bold text-white">Dasbor Pengawas & Rekap Nilai</h2>
+                    </div>
+                    <p class="text-slate-400 text-sm mt-1">Kelola token ujian dan unduh rekapitulasi nilai seluruh peserta.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold text-sm transition shadow-lg shadow-emerald-600/30 flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel"></i> Ekspor Spreadsheet (CSV)
+                    </button>
+                    <button onclick="closeProctorDashboard()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg font-medium text-sm transition">
+                        Keluar
+                    </button>
+                </div>
+            </div>
+
+            <!-- DASHBOARD STATS & TOKEN MGMT -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                    <span class="text-xs uppercase font-semibold text-slate-400">Token Ujian Aktif</span>
+                    <div class="flex items-center justify-between mt-1">
+                        <div id="displayActiveToken" class="text-2xl font-mono font-bold text-amber-400">PMR2026</div>
+                        <button onclick="promptChangeToken()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-2.5 py-1.5 rounded transition">
+                            <i class="fa-solid fa-key"></i> Ubah
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                    <span class="text-xs uppercase font-semibold text-slate-400">Total Peserta Selesai</span>
+                    <div id="statTotalStudents" class="text-2xl font-bold text-white mt-1">0</div>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                    <span class="text-xs uppercase font-semibold text-slate-400">Rata-Rata Nilai</span>
+                    <div id="statAvgScore" class="text-2xl font-bold text-emerald-400 mt-1">0</div>
+                </div>
+                <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                    <span class="text-xs uppercase font-semibold text-slate-400">Peserta Terindikasi Curang</span>
+                    <div id="statCheaterCount" class="text-2xl font-bold text-red-400 mt-1">0</div>
+                </div>
+            </div>
+
+            <!-- RESULTS TABLE -->
+            <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-xl">
+                <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
+                    <h3 class="font-bold text-white text-base">Daftar Hasil Ujian Peserta</h3>
+                    <input type="text" id="inputSearchStudent" onkeyup="filterResultsTable()" placeholder="Cari nama peserta..." class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-red-500 w-48 md:w-64">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs md:text-sm">
+                        <thead>
+                            <tr class="bg-slate-900/60 text-slate-400 uppercase text-[11px] border-b border-slate-700">
+                                <th class="p-3.5">Waktu</th>
+                                <th class="p-3.5">Nama Peserta</th>
+                                <th class="p-3.5">Unit PMR</th>
+                                <th class="p-3.5 text-center">Nilai (0-100)</th>
+                                <th class="p-3.5 text-center">Jumlah B / S</th>
+                                <th class="p-3.5 text-center">Status Kecurangan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableResultsBody" class="divide-y divide-slate-700/50 text-slate-200">
+                            <tr>
+                                <td colspan="6" class="p-6 text-center text-slate-500">Belum ada data nilai peserta yang masuk.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-800/50 border-t border-slate-800 py-3 text-center text-xs text-slate-500">
+        &copy; 2026 Sistem Ujian Online PMR Anti-Curang. Dilindungi Hak Cipta.
+    </footer>
+
+    <!-- CUSTOM MODAL DIALOG -->
+    <div id="customModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+            <div id="modalIcon" class="w-12 h-12 rounded-full flex items-center justify-center mx-auto text-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 id="modalTitle" class="text-lg font-bold text-white">Pemberitahuan</h3>
+            <p id="modalMessage" class="text-sm text-slate-300 leading-relaxed">Pesan modal disini.</p>
+            <div id="modalInputs" class="hidden">
+                <input type="password" id="modalInputPassword" placeholder="Masukkan Kata Sandi" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-red-500 mb-2">
+                <input type="text" id="modalInputToken" placeholder="Token Baru" class="hidden w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-red-500 uppercase font-mono">
+            </div>
+            <div class="flex gap-2 justify-center pt-2">
+                <button id="modalBtnCancel" onclick="closeCustomModal()" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2 rounded-lg text-xs font-medium transition">
+                    Batal
+                </button>
+                <button id="modalBtnConfirm" onclick="closeCustomModal()" class="bg-red-600 hover:bg-red-500 text-white px-5 py-2 rounded-lg text-xs font-semibold transition">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT APPLICATION CODE -->
+    <script>
+        // --- FIREBASE CONFIGURATION (IN-MEMORY / LOCAL PERSISTENCE BACKUP) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDummyKeyForLocalAndFirebaseSync123",
+            authDomain: "cbt-pmr-default.firebaseapp.com",
+            databaseURL: "https://cbt-pmr-default-rtdb.firebaseio.com",
+            projectId: "cbt-pmr-default",
+            storageBucket: "cbt-pmr-default.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abcdef123456"
+        };
+        
+        let db;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        } catch(e) {
+            console.log("Firebase initialized in local fallback mode.");
+        }
+
+        // --- GLOBAL STATE ---
+        let currentToken = "PMR2026";
+        let activeStudent = { name: "", unit: "" };
+        let currentQuestionIndex = 0;
+        let studentAnswers = {}; // { qIndex: value }
+        let cheatViolations = 0;
+        const maxAllowedViolations = 3;
+        let examTimerInterval = null;
+        let totalExamSeconds = 30 * 60; // 30 Minutes
+        let webcamStream = null;
+        let isExamActive = false;
+        let localExamResults = [];
+
+        // --- 30 PMR QUESTIONS DATASET ---
+        const questionsData = [
+            // --- 15 PILIHAN GANDA (SINGLE CHOICE) ---
+            { id: 1, type: "pg", question: "Siapakah pendiri Gerakan Palang Merah Internasional yang menulis buku 'A Memory of Solferino'?", options: ["Henry Dunant", "Clara Barton", "Guillaume-Henri Dufour", "Louis Appia"], correct: 0 },
+            { id: 2, type: "pg", question: "Prinsip Dasar Gerakan Palang Merah dan Sabit Merah Internasional berjumlah berapa?", options: ["5 Prinsip", "7 Prinsip", "10 Prinsip", "12 Prinsip"], correct: 1 },
+            { id: 3, type: "pg", question: "Di kota manakah Perjanjian Jenewa Pertama diprakarsai dan ditandatangani pada tahun 1864?", options: ["Paris", "Roma", "Jenewa", "Zurich"], correct: 2 },
+            { id: 4, type: "pg", question: "Prinsip yang menegaskan bahwa Palang Merah tidak memihak dalam membagi bantuan disebut...", options: ["Kemanusiaan", "Kesamaan (Impartiality)", "Kenetralan", "Kemandirian"], correct: 1 },
+            { id: 5, type: "pg", question: "Pemberian pertolongan pertama pada korban pingsan yang benar adalah dengan posisi...", options: ["Duduk tegak", "Telentang dengan kaki ditinggikan", "Tengkurap", "Diberi minum air dingin segera"], correct: 1 },
+            { id: 6, type: "pg", question: "Berapa frekuensi normal denyut nadi manusia dewasa per menit dalam keadaan istirahat?", options: ["40 - 50 x/menit", "60 - 100 x/menit", "120 - 140 x/menit", "150 - 180 x/menit"], correct: 1 },
+            { id: 7, type: "pg", question: "Suhu tubuh normal manusia berkisar antara...", options: ["33°C - 35°C", "36.5°C - 37.5°C", "38.5°C - 39°C", "40°C - 41°C"], correct: 1 },
+            { id: 8, type: "pg", question: "Singkatan dari RJP dalam prosedur Pertolongan Pertama adalah...", options: ["Resusitasi Jantung Paru", "Rawat Jalur Pernapasan", "Rehabilitasi Jaringan Primer", "Respon Jantung Pertama"], correct: 0 },
+            { id: 9, type: "pg", question: "Dalam penanganan luka bakar ringan akibat tersiram air panas, langkah awal yang paling tepat adalah...", options: ["Mengoleskan pasta gigi", "Mendinginkan dengan air mengalir", "Mengoleskan mentega", "Memecahkan gelembung luka"], correct: 1 },
+            { id: 10, type: "pg", question: "Kain segitiga yang biasa digunakan untuk pembalutan dan pembidaian dalam pertolongan pertama disebut...", options: ["Kasa steril", "Mitela", "Elastic Bandage", "Plester Cepat"], correct: 1 },
+            { id: 11, type: "pg", question: "Golongan darah yang dikenal sebagai donor universal adalah...", options: ["Golongan Darah A", "Golongan Darah B", "Golongan Darah AB", "Golongan Darah O"], correct: 3 },
+            { id: 12, type: "pg", question: "Salah satu Tri Bakti PMR adalah 'Bakti Masyarakat'. Contoh kegiatannya adalah...", options: ["Mengikuti latihan rutin", "Mendonorkan darah atau bersih lingkungan", "Mencari anggota baru", "Mempelajari sejarah PMI"], correct: 1 },
+            { id: 13, type: "pg", question: "Warna tingkatan PMR untuk siswa jenjang SMP (Usia 12-15 tahun) adalah PMR Madya dengan warna khas...", options: ["Hijau", "Biru", "Kuning", "Merah"], correct: 1 },
+            { id: 14, type: "pg", question: "Lambang Palang Merah di atas dasar warna putih secara resmi diakui pada Penghormatan kepada negara...", options: ["Inggris", "Swiss", "Prancis", "Jerman"], correct: 1 },
+            { id: 15, type: "pg", question: "Tingkat respons korban dalam penilaian awal Pertolongan Pertama disingkat ASBK/AVPU. Huruf 'S' atau 'V' mewakili...", options: ["Sadar / Visual", "Suara / Voice", "Sakit / Vital", "Saraf / Vessel"], correct: 1 },
+
+            // --- 10 BENAR / SALAH (TRUE / FALSE) ---
+            { id: 16, type: "bs", question: "Pertolongan Pertama diberikan untuk mencegah maut, mencegah cacat, dan menunjang penyembuhan.", options: ["Benar", "Salah"], correct: 0 },
+            { id: 17, type: "bs", question: "Markas Besar Palang Merah Indonesia (PMI) terletak di kota Bandung.", options: ["Benar", "Salah"], correct: 1 }, // Salah (Jakarta)
+            { id: 18, type: "bs", question: "Salah satu Prinsip Dasar Gerakan Palang Merah adalah 'Komersialisasi'.", options: ["Benar", "Salah"], correct: 1 }, // Salah
+            { id: 19, type: "bs", question: "Pembidaian pada patah tulang bertujuan untuk memfiksasi/mencegah pergerakan sendi di atas dan di bawah patahan.", options: ["Benar", "Salah"], correct: 0 },
+            { id: 20, type: "bs", question: "PMR Mula adalah tingkatan PMR untuk siswa tingkat SMA/sederajat.", options: ["Benar", "Salah"], correct: 1 }, // Salah (Wira)
+            { id: 21, type: "bs", question: "Tekanan darah sistolik normal pada orang dewasa berada di kisaran 100-120 mmHg.", options: ["Benar", "Salah"], correct: 0 },
+            { id: 22, type: "bs", question: "Kompres dingin diberikan untuk mengurangi pembengkakan pada cedera terkilir/keseleo yang baru terjadi.", options: ["Benar", "Salah"], correct: 0 },
+            { id: 23, type: "bs", question: "KSR (Korp Sukarela) merupakan bagian dari keanggotaan PMR.", options: ["Benar", "Salah"], correct: 1 }, // Salah (Relawan PMI Dewasa/Mahasiswa)
+            { id: 24, type: "bs", question: "Luka tembus pada dada harus ditutup rapat kedap udara segera untuk mencegah pnemotoraks.", options: ["Benar", "Salah"], correct: 0 },
+            { id: 25, type: "bs", question: "Palang Merah Indonesia didirikan pada tanggal 17 September 1945.", options: ["Benar", "Salah"], correct: 0 },
+
+            // --- 5 PILIHAN GANDA KOMPLEKS (MULTIPLE SELECT) ---
+            { id: 26, type: "pgk", question: "Pilihlah PRINSIP DASAR Gerakan Palang Merah dan Sabit Merah Internasional! (Pilih 3 Jawaban Benar)", options: ["Kemanusiaan", "Kemandirian", "Kesukarelaan", "Keuntungan Finansial"], correct: [0, 1, 2] },
+            { id: 27, type: "pgk", question: "Manakah yang termasuk dalam isi TRI BAKTI PMR? (Pilih 2 Jawaban Benar)", options: ["Meningkatkan keterampilan hidup sehat", "Berkarya dan berbakti di masyarakat", "Meminta sumbangan wajib", "Mewajibkan militer"], correct: [0, 1] },
+            { id: 28, type: "pgk", question: "Manakah tindakan yang BENAR saat menangani pendarahan luar yang parah? (Pilih 2 Jawaban Benar)", options: ["Penekanan langsung pada luka", "Tinggikan anggota tubuh yang terluka melebihi jantung", "Memberikan minum alkohol", "Mencuci luka dengan deterjen"], correct: [0, 1] },
+            { id: 29, type: "pgk", question: "Pilihlah APD (Alat Pelindung Diri) standar bagi Penolong Pertama! (Pilih 3 Jawaban Benar)", options: ["Sarung Tangan Latex", "Masker Penolong", "Kacamata Pelindung (Goggles)", "Sepatu Hak Tinggi"], correct: [0, 1, 2] },
+            { id: 30, type: "pgk", question: "Manakah yang merupakan komponen dari Komponen Gerakan Palang Merah Internasional? (Pilih 2 Jawaban Benar)", options: ["ICRC (Komite Internasional)", "IFRC (Federasi Internasional)", "UNESCO", "WHO"], correct: [0, 1] }
+        ];
+
+        // --- INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            setupAntiCheatGuards();
+            fetchTokenFromFirebase();
+            syncResultsFromFirebase();
+        });
+
+        // --- ANTI-CHEAT SYSTEM PROTECTION ---
+        function setupAntiCheatGuards() {
+            // Disable Right Click Context Menu
+            document.addEventListener('contextmenu', e => e.preventDefault());
+
+            // Disable Copy/Cut/Paste
+            document.addEventListener('copy', e => e.preventDefault());
+            document.addEventListener('cut', e => e.preventDefault());
+            document.addEventListener('paste', e => e.preventDefault());
+
+            // Disable DevTools & Shortcut keys
+            document.addEventListener('keydown', e => {
+                if (!isExamActive) return;
+                // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+S, Ctrl+P, Alt+Tab (partial)
+                if (
+                    e.key === 'F12' ||
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+                    (e.ctrlKey && (e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P'))
+                ) {
+                    e.preventDefault();
+                    triggerCheatViolation("Mencoba menggunakan tombol pintas / Inspect Element");
+                }
+            });
+
+            // Detect Window/Tab Switch & Focus Loss
+            window.addEventListener('blur', () => {
+                if (isExamActive) {
+                    triggerCheatViolation("Meninggalkan layar ujian / Perpindahan Tab");
+                }
+            });
+
+            // Detect Fullscreen Change
+            document.addEventListener('fullscreenchange', () => {
+                if (isExamActive && !document.fullscreenElement) {
+                    triggerCheatViolation("Keluar dari Mode Layar Penuh (Fullscreen)");
+                }
+            });
+        }
+
+        function triggerCheatViolation(reason) {
+            if (!isExamActive) return;
+            cheatViolations++;
+            updateCheatUI();
+
+            if (cheatViolations >= maxAllowedViolations) {
+                showAlertModal("PELANGGARAN MAKSIMAL!", `Anda telah melanggar aturan ujian 3 kali (${reason}). Sistem secara otomatis mengumpulkan ujian Anda sekarang.`, () => {
+                    autoSubmitExam(true);
+                });
+            } else {
+                showAlertModal("PERINGATAN KECURANGAN!", `Deteksi Kecurangan: ${reason}.\n\nPeringatan ${cheatViolations} dari ${maxAllowedViolations}. Jika mencapai 3 kali, ujian akan otomatis dihentikan!`);
+            }
+        }
+
+        function updateCheatUI() {
+            const text = document.getElementById('cheatCountText');
+            const bar = document.getElementById('cheatProgressBar');
+            const badge = document.getElementById('cheatWarningBadge');
+
+            if (text) text.textContent = `${cheatViolations} / ${maxAllowedViolations}`;
+            if (bar) {
+                const pct = (cheatViolations / maxAllowedViolations) * 100;
+                bar.style.width = `${pct}%`;
+                if (cheatViolations === 1) {
+                    bar.className = "bg-amber-500 h-full transition-all duration-300";
+                    badge.className = "bg-amber-500/20 text-amber-400 text-[10px] px-2 py-0.5 rounded border border-amber-500/30";
+                    badge.textContent = "Peringatan 1";
+                } else if (cheatViolations >= 2) {
+                    bar.className = "bg-red-500 h-full transition-all duration-300";
+                    badge.className = "bg-red-500/20 text-red-400 text-[10px] px-2 py-0.5 rounded border border-red-500/30";
+                    badge.textContent = "Bahaya!";
+                }
+            }
+        }
+
+        // --- WEBCAM PROCTORING ---
+        async function initWebcam() {
+            const video = document.getElementById('webcamVideo');
+            const fallback = document.getElementById('webcamFallback');
+            try {
+                webcamStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+                video.srcObject = webcamStream;
+                fallback.classList.add('hidden');
+            } catch (err) {
+                console.warn("Kamera tidak dapat diakses:", err);
+                fallback.classList.remove('hidden');
+            }
+        }
+
+        function stopWebcam() {
+            if (webcamStream) {
+                webcamStream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        // --- TOKEN MANAGEMENT & FIREBASE SYNC ---
+        function fetchTokenFromFirebase() {
+            if (db) {
+                db.ref('examConfig/token').on('value', snapshot => {
+                    if (snapshot.exists()) {
+                        currentToken = snapshot.val();
+                        document.getElementById('displayActiveToken').textContent = currentToken;
+                    }
+                });
+            }
+        }
+
+        function setTokenToFirebase(newToken) {
+            currentToken = newToken.toUpperCase();
+            document.getElementById('displayActiveToken').textContent = currentToken;
+            if (db) {
+                db.ref('examConfig/token').set(currentToken);
+            }
+        }
+
+        // --- EXAM START LOGIC ---
+        function handleStartExam(e) {
+            e.preventDefault();
+            const name = document.getElementById('inputStudentName').value.trim();
+            const unit = document.getElementById('inputStudentUnit').value.trim();
+            const token = document.getElementById('inputExamToken').value.trim().toUpperCase();
+
+            if (!name || !unit) {
+                showAlertModal("Data Tidak Lengkap", "Silakan isi nama lengkap dan unit PMR Anda.");
+                return;
+            }
+
+            if (token !== currentToken) {
+                showAlertModal("Token Salah", "Token ujian yang Anda masukkan tidak valid! Silakan tanya pengawas.");
+                return;
+            }
+
+            activeStudent = { name, unit };
+
+            // Request Fullscreen
+            requestFullscreenMode();
+
+            // Start Exam Setup
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('examSection').classList.remove('hidden');
+            document.getElementById('displayStudentInfo').textContent = `${name} (${unit})`;
+
+            isExamActive = true;
+            initWebcam();
+            startTimer();
+            renderQuestionGrid();
+            loadQuestion(0);
+        }
+
+        function requestFullscreenMode() {
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) {
+                docEl.requestFullscreen().catch(() => {});
+            } else if (docEl.mozRequestFullScreen) {
+                docEl.mozRequestFullScreen().catch(() => {});
+            } else if (docEl.webkitRequestFullscreen) {
+                docEl.webkitRequestFullscreen().catch(() => {});
+            }
+        }
+
+        // --- TIMER CONTROL ---
+        function startTimer() {
+            clearInterval(examTimerInterval);
+            examTimerInterval = setInterval(() => {
+                totalExamSeconds--;
+                const mins = Math.floor(totalExamSeconds / 60);
+                const secs = totalExamSeconds % 60;
+                document.getElementById('timerDisplay').textContent = 
+                    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+                if (totalExamSeconds <= 0) {
+                    clearInterval(examTimerInterval);
+                    showAlertModal("Waktu Habis!", "Waktu pengerjaan ujian telah selesai. Hasil Anda sedang disimpan.", () => {
+                        autoSubmitExam(false);
+                    });
+                }
+            }, 1000);
+        }
+
+        // --- RENDER QUESTION & NAVIGATION ---
+        function renderQuestionGrid() {
+            const grid = document.getElementById('questionGrid');
+            grid.innerHTML = '';
+            questionsData.forEach((q, idx) => {
+                const btn = document.createElement('button');
+                btn.id = `navBtn-${idx}`;
+                btn.onclick = () => loadQuestion(idx);
+                btn.className = getNavBtnClass(idx);
+                btn.textContent = idx + 1;
+                grid.appendChild(btn);
+            });
+            updateAnsweredCount();
+        }
+
+        function getNavBtnClass(idx) {
+            const isAnswered = studentAnswers[idx] !== undefined && studentAnswers[idx] !== null && (Array.isArray(studentAnswers[idx]) ? studentAnswers[idx].length > 0 : true);
+            const isCurrent = idx === currentQuestionIndex;
+
+            let base = "h-9 w-full rounded font-semibold text-xs border transition flex items-center justify-center ";
+            if (isCurrent) {
+                return base + "bg-red-600 text-white border-red-400 ring-2 ring-red-400/50";
+            } else if (isAnswered) {
+                return base + "bg-emerald-600/30 text-emerald-300 border-emerald-500/50";
+            } else {
+                return base + "bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700";
+            }
+        }
+
+        function updateAnsweredCount() {
+            let count = 0;
+            questionsData.forEach((_, idx) => {
+                if (studentAnswers[idx] !== undefined && studentAnswers[idx] !== null && (Array.isArray(studentAnswers[idx]) ? studentAnswers[idx].length > 0 : true)) {
+                    count++;
+                }
+            });
+            document.getElementById('answeredCounter').textContent = `${count}/30 Dijawab`;
+        }
+
+        function loadQuestion(idx) {
+            currentQuestionIndex = idx;
+            const q = questionsData[idx];
+
+            document.getElementById('currentNum').textContent = idx + 1;
+            document.getElementById('questionText').textContent = q.question;
+
+            // Badge Type
+            const badge = document.getElementById('questionTypeBadge');
+            if (q.type === 'pg') {
+                badge.textContent = "Pilihan Ganda (Pilih 1)";
+            } else if (q.type === 'bs') {
+                badge.textContent = "Benar / Salah";
+            } else if (q.type === 'pgk') {
+                badge.textContent = "Pilihan Ganda Kompleks (Centang Banyak)";
+            }
+
+            // Render Options
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+
+            q.options.forEach((optText, optIdx) => {
+                const optBox = document.createElement('label');
+                optBox.className = "flex items-start gap-3 p-3.5 rounded-lg border border-slate-700 bg-slate-900/60 hover:bg-slate-700/50 cursor-pointer transition no-select";
+
+                if (q.type === 'pg' || q.type === 'bs') {
+                    const isChecked = studentAnswers[idx] === optIdx;
+                    optBox.innerHTML = `
+                        <input type="radio" name="optionChoice" value="${optIdx}" ${isChecked ? 'checked' : ''} onchange="saveSingleChoiceAnswer(${idx}, ${optIdx})" class="mt-1 text-red-600 focus:ring-red-500 bg-slate-800 border-slate-600">
+                        <span class="text-sm text-slate-200 leading-snug">${optText}</span>
+                    `;
+                } else if (q.type === 'pgk') {
+                    const selectedArr = studentAnswers[idx] || [];
+                    const isChecked = selectedArr.includes(optIdx);
+                    optBox.innerHTML = `
+                        <input type="checkbox" name="optionChoice" value="${optIdx}" ${isChecked ? 'checked' : ''} onchange="saveMultipleChoiceAnswer(${idx}, ${optIdx})" class="mt-1 text-red-600 rounded focus:ring-red-500 bg-slate-800 border-slate-600">
+                        <span class="text-sm text-slate-200 leading-snug">${optText}</span>
+                    `;
+                }
+                container.appendChild(optBox);
+            });
+
+            // Update Nav Buttons
+            document.getElementById('btnPrev').disabled = (idx === 0);
+            if (idx === questionsData.length - 1) {
+                document.getElementById('btnNext').classList.add('hidden');
+                document.getElementById('btnFinishExam').classList.remove('hidden');
+            } else {
+                document.getElementById('btnNext').classList.remove('hidden');
+                document.getElementById('btnFinishExam').classList.add('hidden');
+            }
+
+            renderQuestionGrid();
+        }
+
+        function saveSingleChoiceAnswer(qIndex, optionIndex) {
+            studentAnswers[qIndex] = optionIndex;
+            renderQuestionGrid();
+        }
+
+        function saveMultipleChoiceAnswer(qIndex, optionIndex) {
+            if (!studentAnswers[qIndex] || !Array.isArray(studentAnswers[qIndex])) {
+                studentAnswers[qIndex] = [];
+            }
+            const arr = studentAnswers[qIndex];
+            const foundIdx = arr.indexOf(optionIndex);
+            if (foundIdx > -1) {
+                arr.splice(foundIdx, 1);
+            } else {
+                arr.push(optionIndex);
+            }
+            renderQuestionGrid();
+        }
+
+        function navigateQuestion(direction) {
+            const nextIdx = currentQuestionIndex + direction;
+            if (nextIdx >= 0 && nextIdx < questionsData.length) {
+                loadQuestion(nextIdx);
+            }
+        }
+
+        function confirmFinishExam() {
+            showConfirmModal("Konfirmasi Selesai", "Apakah Anda yakin ingin menyelesaikan dan mengirimkan seluruh jawaban Anda?", () => {
+                autoSubmitExam(false);
+            });
+        }
+
+        // --- CALCULATE SCORE & SUBMIT ---
+        function autoSubmitExam(forceCheated = false) {
+            isExamActive = false;
+            clearInterval(examTimerInterval);
+            stopWebcam();
+
+            // Calculate Score
+            let correctCount = 0;
+            let wrongCount = 0;
+
+            questionsData.forEach((q, idx) => {
+                const userAns = studentAnswers[idx];
+                if (q.type === 'pg' || q.type === 'bs') {
+                    if (userAns === q.correct) {
+                        correctCount++;
+                    } else {
+                        wrongCount++;
+                    }
+                } else if (q.type === 'pgk') {
+                    // PGK: Array comparison
+                    const userArr = Array.isArray(userAns) ? userAns.sort() : [];
+                    const correctArr = q.correct.sort();
+                    if (JSON.stringify(userArr) === JSON.stringify(correctArr)) {
+                        correctCount++;
+                    } else {
+                        wrongCount++;
+                    }
+                }
+            });
+
+            const finalScore = Math.round((correctCount / questionsData.length) * 100);
+            const timestamp = new Date().toLocaleString('id-ID');
+
+            const resultPayload = {
+                id: Date.now(),
+                timestamp,
+                studentName: activeStudent.name,
+                studentUnit: activeStudent.unit,
+                score: finalScore,
+                correctCount,
+                wrongCount,
+                cheatStatus: forceCheated || cheatViolations >= maxAllowedViolations ? "Terindikasi Curang" : (cheatViolations > 0 ? `${cheatViolations}x Peringatan` : "Aman / Jujur")
+            };
+
+            saveResultToFirebase(resultPayload);
+
+            showAlertModal("Ujian Selesai!", `Terima kasih ${activeStudent.name}. Nilai Ujian Anda: ${finalScore} / 100.\nJawaban Anda telah berhasil tersimpan di sistem.`, () => {
+                window.location.reload();
+            });
+        }
+
+        function saveResultToFirebase(payload) {
+            // Local Array Backup
+            localExamResults.push(payload);
+
+            if (db) {
+                db.ref('examResults/' + payload.id).set(payload);
+            }
+        }
+
+        function syncResultsFromFirebase() {
+            if (db) {
+                db.ref('examResults').on('value', snapshot => {
+                    const data = snapshot.val();
+                    localExamResults = [];
+                    if (data) {
+                        Object.keys(data).forEach(key => {
+                            localExamResults.push(data[key]);
+                        });
+                    }
+                    renderProctorTable();
+                });
+            }
+        }
+
+        // --- PROCTOR DASHBOARD & CSV EXPORT ---
+        function showProctorLoginModal() {
+            showPasswordModal("Akses Dasbor Pengawas", "Masukkan Kata Sandi Pengawas untuk membuka dasbor nilai:", (pass) => {
+                if (pass === "2011") {
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('examSection').classList.add('hidden');
+                    document.getElementById('proctorDashboard').classList.remove('hidden');
+                    renderProctorTable();
+                } else {
+                    showAlertModal("Akses Ditolak", "Kata sandi pengawas yang Anda masukkan salah!");
+                }
+            });
+        }
+
+        function closeProctorDashboard() {
+            document.getElementById('proctorDashboard').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+        }
+
+        function promptChangeToken() {
+            showTokenModal("Kelola Token Ujian", "Masukkan Token Ujian Baru untuk disebarkan ke peserta:", (newToken) => {
+                if (newToken && newToken.trim().length > 0) {
+                    setTokenToFirebase(newToken.trim());
+                    showAlertModal("Berhasil", `Token Ujian telah diperbarui menjadi: ${newToken.toUpperCase()}`);
+                }
+            });
+        }
+
+        function renderProctorTable() {
+            const tbody = document.getElementById('tableResultsBody');
+            tbody.innerHTML = '';
+
+            if (localExamResults.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500">Belum ada data nilai peserta yang masuk.</td></tr>`;
+                document.getElementById('statTotalStudents').textContent = "0";
+                document.getElementById('statAvgScore').textContent = "0";
+                document.getElementById('statCheaterCount').textContent = "0";
+                return;
+            }
+
+            let totalScore = 0;
+            let cheaterCount = 0;
+
+            localExamResults.forEach(res => {
+                totalScore += res.score;
+                if (res.cheatStatus.includes("Curang")) cheaterCount++;
+
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-700/50 hover:bg-slate-700/30 transition";
+                tr.innerHTML = `
+                    <td class="p-3.5 text-slate-400 font-mono text-xs">${res.timestamp}</td>
+                    <td class="p-3.5 font-bold text-white">${res.studentName}</td>
+                    <td class="p-3.5 text-slate-300">${res.studentUnit}</td>
+                    <td class="p-3.5 text-center font-bold font-mono ${res.score >= 70 ? 'text-emerald-400' : 'text-amber-400'}">${res.score}</td>
+                    <td class="p-3.5 text-center text-slate-300 font-mono"><span class="text-emerald-400">${res.correctCount}B</span> / <span class="text-red-400">${res.wrongCount}S</span></td>
+                    <td class="p-3.5 text-center">
+                        <span class="text-xs px-2.5 py-1 rounded font-medium border ${res.cheatStatus.includes('Curang') ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'}">
+                            ${res.cheatStatus}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('statTotalStudents').textContent = localExamResults.length;
+            document.getElementById('statAvgScore').textContent = Math.round(totalScore / localExamResults.length);
+            document.getElementById('statCheaterCount').textContent = cheaterCount;
+        }
+
+        function filterResultsTable() {
+            const query = document.getElementById('inputSearchStudent').value.toLowerCase();
+            const rows = document.querySelectorAll('#tableResultsBody tr');
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        function exportToCSV() {
+            if (localExamResults.length === 0) {
+                showAlertModal("Tidak Ada Data", "Belum ada data nilai peserta untuk diekspor!");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Waktu,Nama Peserta,Unit PMR,Nilai (0-100),Jumlah Benar,Jumlah Salah,Status Kecurangan\n";
+
+            localExamResults.forEach(r => {
+                const row = `"${r.timestamp}","${r.studentName}","${r.studentUnit}",${r.score},${r.correctCount},${r.wrongCount},"${r.cheatStatus}"`;
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Rekap_Nilai_Ujian_PMR_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- CUSTOM MODAL DIALOGS ---
+        let modalConfirmCallback = null;
+
+        function showAlertModal(title, msg, onConfirm = null) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = msg;
+            document.getElementById('modalInputs').classList.add('hidden');
+            document.getElementById('modalBtnCancel').classList.add('hidden');
+            document.getElementById('customModal').classList.remove('hidden');
+            modalConfirmCallback = onConfirm;
+        }
+
+        function showConfirmModal(title, msg, onConfirm) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = msg;
+            document.getElementById('modalInputs').classList.add('hidden');
+            document.getElementById('modalBtnCancel').classList.remove('hidden');
+            document.getElementById('customModal').classList.remove('hidden');
+            modalConfirmCallback = onConfirm;
+        }
+
+        function showPasswordModal(title, msg, onConfirm) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = msg;
+            document.getElementById('modalInputs').classList.remove('hidden');
+            document.getElementById('modalInputPassword').classList.remove('hidden');
+            document.getElementById('modalInputToken').classList.add('hidden');
+            document.getElementById('modalInputPassword').value = '';
+            document.getElementById('modalBtnCancel').classList.remove('hidden');
+            document.getElementById('customModal').classList.remove('hidden');
+
+            modalConfirmCallback = () => {
+                const pass = document.getElementById('modalInputPassword').value;
+                if (onConfirm) onConfirm(pass);
+            };
+        }
+
+        function showTokenModal(title, msg, onConfirm) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = msg;
+            document.getElementById('modalInputs').classList.remove('hidden');
+            document.getElementById('modalInputPassword').classList.add('hidden');
+            document.getElementById('modalInputToken').classList.remove('hidden');
+            document.getElementById('modalInputToken').value = currentToken;
+            document.getElementById('modalBtnCancel').classList.remove('hidden');
+            document.getElementById('customModal').classList.remove('hidden');
+
+            modalConfirmCallback = () => {
+                const token = document.getElementById('modalInputToken').value;
+                if (onConfirm) onConfirm(token);
+            };
+        }
+
+        function closeCustomModal() {
+            document.getElementById('customModal').classList.add('hidden');
+            if (modalConfirmCallback) {
+                const cb = modalConfirmCallback;
+                modalConfirmCallback = null;
+                cb();
+            }
+        }
+    </script>
+</body>
+</html>
